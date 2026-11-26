@@ -39,6 +39,12 @@ function nav_links(): array {
     }
     return $out;
 }
+function tut_dl_local(string $file): bool {
+    return is_file(__DIR__ . '/downloads/' . $file);
+}
+function tut_dl(string $file, string $fallback): string {
+    return tut_dl_local($file) ? '/downloads/' . $file : $fallback;
+}
 function drawer_script(): void {
     echo '<script>(function(){var b=document.getElementById("menubtn"),d=document.getElementById("drawer"),m=document.getElementById("menumask");'
        . 'if(!b||!d)return;function tog(v){var on=(v===undefined)?!d.classList.contains("on"):v;d.classList.toggle("on",on);m.classList.toggle("on",on);b.setAttribute("aria-expanded",on?"true":"false");document.body.style.overflow=on?"hidden":"";}'
@@ -84,6 +90,7 @@ function nav(): void {
         echo '<aside class="drawer" id="drawer"><div class="drawerhd">菜单</div>';
         echo '<a href="/">首页</a>';
         echo '<a href="/query">我的订阅</a>';
+        echo '<a href="/tutorial">使用教程</a>';
         echo '<a href="/admin">管理后台</a>';
         $links = nav_links();
         if ($links) {
@@ -2175,16 +2182,22 @@ elseif ($path === '/tutorial') {
         echo '<section class="hero" style="padding-bottom:4px"><h1>使用教程</h1>';
         echo '<p class="sub">三步搞定：下载客户端 → 导入订阅 → 一键连接</p></section>';
 
+        $dlWin  = tut_dl('Hiddify-Windows-Setup-x64.exe', 'https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Windows-Setup-x64.exe');
+        $dlApk  = tut_dl('Hiddify-Android-universal.apk', 'https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-Android-universal.apk');
+        $dlMac  = tut_dl('Hiddify-MacOS.dmg', 'https://github.com/hiddify/hiddify-app/releases/latest/download/Hiddify-MacOS.dmg');
+        $local  = tut_dl_local('Hiddify-Windows-Setup-x64.exe');
         echo '<section class="panel" style="margin-top:26px">';
         echo '<h2 class="tut-h2"><span class="num">1</span> 下载客户端</h2>';
-        echo '<p class="muted small" style="margin:6px 0 0">全部来自 Hiddify 官方 GitHub 发布页 v5.9.15，装机包已放在本站，下载更快。</p>';
+        echo '<p class="muted small" style="margin:6px 0 0">' . ($local
+            ? '全部来自 Hiddify 官方发布页，安装包已放在本站，下载更快。'
+            : '全部来自 Hiddify 官方 GitHub 发布页，点击会跳转官方下载。') . '</p>';
         echo '<div class="tutdl">';
-        echo '<div class="dlcard"><div class="os">🪟 Windows</div><div class="meta">安装版 · x64 · 48.8 MB</div>'
-           . '<a class="btn" href="/downloads/Hiddify-Windows-Setup-x64.exe" download>下载 Windows 版</a></div>';
-        echo '<div class="dlcard"><div class="os">🤖 Android</div><div class="meta">通用版 · Android 5.0+ · 179 MB</div>'
-           . '<a class="btn" href="/downloads/Hiddify-Android-universal.apk" download>下载安卓版</a></div>';
-        echo '<div class="dlcard"><div class="os">🍎 macOS</div><div class="meta">DMG · Intel / Apple 芯片 · 119 MB</div>'
-           . '<a class="btn" href="/downloads/Hiddify-MacOS.dmg" download>下载 Mac 版</a></div>';
+        echo '<div class="dlcard"><div class="os">🪟 Windows</div><div class="meta">安装版 · x64 · 约 49 MB</div>'
+           . '<a class="btn" href="' . e($dlWin) . '"' . ($local ? ' download' : ' target="_blank" rel="noopener"') . '>下载 Windows 版</a></div>';
+        echo '<div class="dlcard"><div class="os">🤖 Android</div><div class="meta">通用版 · Android 7.0+ · 约 180 MB</div>'
+           . '<a class="btn" href="' . e($dlApk) . '"' . ($local ? ' download' : ' target="_blank" rel="noopener"') . '>下载安卓版</a></div>';
+        echo '<div class="dlcard"><div class="os">🍎 macOS</div><div class="meta">DMG · Intel / Apple 芯片 · 约 120 MB</div>'
+           . '<a class="btn" href="' . e($dlMac) . '"' . ($local ? ' download' : ' target="_blank" rel="noopener"') . '>下载 Mac 版</a></div>';
         echo '<div class="dlcard"><div class="os">📱 iPhone / iPad</div><div class="meta">App Store · 需要 iOS 15 或更高</div>'
            . '<a class="btn" href="https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532" target="_blank" rel="noopener">前往 App Store</a></div>';
         echo '</div></section>';
