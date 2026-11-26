@@ -2184,6 +2184,8 @@ elseif ($path === '/tutorial') {
            . '<a class="btn" href="/downloads/Hiddify-Android-universal.apk" download>下载安卓版</a></div>';
         echo '<div class="dlcard"><div class="os">🍎 macOS</div><div class="meta">DMG · Intel / Apple 芯片 · 119 MB</div>'
            . '<a class="btn" href="/downloads/Hiddify-MacOS.dmg" download>下载 Mac 版</a></div>';
+        echo '<div class="dlcard"><div class="os">📱 iPhone / iPad</div><div class="meta">App Store · 需要 iOS 15 或更高</div>'
+           . '<a class="btn" href="https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532" target="_blank" rel="noopener">前往 App Store</a></div>';
         echo '</div></section>';
 
         echo '<section class="panel" style="margin-top:18px">';
@@ -2210,6 +2212,11 @@ elseif ($path === '/tutorial') {
         echo '<li>点上面的「下载安卓版」，安装时如果提示「未知来源」，允许本次安装即可。</li>';
         echo '<li>打开 App，点右下角的 <b>+</b> →「从剪贴板导入」。</li>';
         echo '<li>粘贴订阅链接，点保存，配置会出现在首页列表。</li></ol>';
+
+        echo '<div class="tut-os">iPhone / iPad</div><ol class="tut-ol">';
+        echo '<li>点「前往 App Store」，搜索 <b>Hiddify</b> 下载安装（需要 iOS 15 或更高）。中国区商店搜不到的话，换美区 / 港区 Apple ID 登录后再搜。</li>';
+        echo '<li>打开 App，点右上角或列表下方的 <b>+</b> →「从剪贴板添加」，粘贴订阅链接后保存。</li>';
+        echo '<li>点连接时系统会弹出「Hiddify 想要添加 VPN 配置」，点「允许」，验证 Face ID 或锁屏密码即可。</li></ol>';
         echo '</section>';
 
         echo '<section class="panel" style="margin-top:18px">';
