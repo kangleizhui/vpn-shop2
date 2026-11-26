@@ -26,7 +26,10 @@ function page_head(string $title): void {
     echo '</head><body>';
 }
 function nav_links(): array {
-    $j = json_decode((string)setting('nav_links', ''), true);
+    $raw = trim((string)setting('nav_links', ''));
+    // 从没配置过：默认给一条站内教程入口；后台删空保存后为 []，不再出现
+    if ($raw === '') return [['title' => '使用教程', 'url' => '/tutorial']];
+    $j = json_decode($raw, true);
     if (!is_array($j)) return [];
     $out = [];
     foreach ($j as $it) {
@@ -90,7 +93,6 @@ function nav(): void {
         echo '<aside class="drawer" id="drawer"><div class="drawerhd">菜单</div>';
         echo '<a href="/">首页</a>';
         echo '<a href="/query">我的订阅</a>';
-        echo '<a href="/tutorial">使用教程</a>';
         echo '<a href="/admin">管理后台</a>';
         $links = nav_links();
         if ($links) {
