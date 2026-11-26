@@ -428,6 +428,7 @@ details.fold.sub>summary{font-size:14px;padding:12px 0;font-weight:600}
 .qrpay #payqr{display:inline-block;background:#fff;padding:14px;border-radius:14px;line-height:0;box-shadow:0 10px 30px -12px rgba(0,0,0,.5)}
 @media (max-width:480px){details.fold{padding:0 14px}}
 /* 收银台渠道分组 */
+.paylabel{margin:16px 0 8px;font-size:13.5px;font-weight:700;color:var(--text);letter-spacing:.02em}
 .paygroup{margin:10px 0 16px}
 .paygrouptitle{font-size:12.5px;color:var(--muted);margin:0 0 8px;letter-spacing:.5px}
 /* 支付方式行内折叠 */

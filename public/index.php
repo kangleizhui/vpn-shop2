@@ -384,13 +384,13 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
             echo '<div class="alert ' . ($o['status'] === 'expired' ? 'err' : 'warn') . '">' . e($stText) . '，请到 <a href="/order/' . e($o['order_no']) . '">订单详情</a> 查看。</div>';
         } elseif (!$avail) {
             if (test_mode() && is_admin()) {
-                echo '<div class="muted small" style="margin:14px 0 4px">选择支付方式</div>';
+                echo '<div class="paylabel">选择支付方式</div>';
                 mock_pay_box($o['order_no']);
             } else {
                 echo '<div class="alert warn">支付通道维护中，请稍后再试或联系客服。</div>';
             }
         } else {
-            echo '<div class="muted small" style="margin:14px 0 4px">选择支付方式</div>';
+            echo '<div class="paylabel">选择支付方式</div>';
             // 只显示真正可用的通道，未开通/开发中的一律不渲染
             foreach (pay_categories() as $cat) {
                 $rows = [];
