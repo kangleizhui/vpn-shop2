@@ -48,6 +48,13 @@ function tut_dl_local(string $file): bool {
 function tut_dl(string $file, string $fallback): string {
     return tut_dl_local($file) ? '/downloads/' . $file : $fallback;
 }
+function mock_pay_box(string $orderNo): void {
+    echo '<div class="paygroup"><div class="paygrouptitle">测试</div>';
+    echo '<form method="post" action="/mock-pay" style="margin:6px 0">' . csrf_field();
+    echo '<input type="hidden" name="order_no" value="' . e($orderNo) . '">';
+    echo '<button class="btn wide" type="submit">模拟支付成功<span class="muted small" style="margin-left:8px">仅管理员 · 不扣款</span></button>';
+    echo '</form></div>';
+}
 function drawer_script(): void {
     echo '<script>(function(){var b=document.getElementById("menubtn"),d=document.getElementById("drawer"),m=document.getElementById("menumask");'
        . 'if(!b||!d)return;function tog(v){var on=(v===undefined)?!d.classList.contains("on"):v;d.classList.toggle("on",on);m.classList.toggle("on",on);b.setAttribute("aria-expanded",on?"true":"false");document.body.style.overflow=on?"hidden":"";}'
@@ -375,13 +382,13 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
         } elseif ($o['status'] !== 'pending') {
             $stText = $o['status'] === 'expired' ? '订单已失效（超过 24 小时未付款），请重新下单' : ('订单状态：' . $o['status']);
             echo '<div class="alert ' . ($o['status'] === 'expired' ? 'err' : 'warn') . '">' . e($stText) . '，请到 <a href="/order/' . e($o['order_no']) . '">订单详情</a> 查看。</div>';
-        } elseif (test_mode() && is_admin()) {
-            echo '<div class="alert warn">当前为测试模式（仅管理员可见），点击下方按钮模拟支付成功。</div>';
-            echo '<form method="post" action="/mock-pay">' . csrf_field();
-            echo '<input type="hidden" name="order_no" value="' . e($o['order_no']) . '">';
-            echo '<button class="btn wide" type="submit">模拟支付成功</button></form>';
         } elseif (!$avail) {
-            echo '<div class="alert warn">支付通道维护中，请稍后再试或联系客服。</div>';
+            if (test_mode() && is_admin()) {
+                echo '<div class="muted small" style="margin:14px 0 4px">选择支付方式</div>';
+                mock_pay_box($o['order_no']);
+            } else {
+                echo '<div class="alert warn">支付通道维护中，请稍后再试或联系客服。</div>';
+            }
         } else {
             echo '<div class="muted small" style="margin:14px 0 4px">选择支付方式</div>';
             // 只显示真正可用的通道，未开通/开发中的一律不渲染
@@ -400,6 +407,7 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
                 }
                 echo '</div>';
             }
+            if (test_mode() && is_admin()) mock_pay_box($o['order_no']);
             echo '<p class="muted center small">支付完成后自动开通，无需手动刷新。</p>';
         }
         echo '</div>';
@@ -1735,7 +1743,7 @@ elseif ($path === '/admin/settings') {
            . 'lock();})();</script>';
 
         echo '<details class="fold"' . (setting('pay_channels') === '' ? ' open' : '') . '><summary>支付设置</summary><div class="foldbody">';
-        echo '<label class="row"><input type="checkbox" name="test_mode" value="1" ' . (test_mode() ? 'checked' : '') . '> 测试模式（无需真实支付，管理员可模拟开通）</label>';
+        echo '<label class="row"><input type="checkbox" name="test_mode" value="1" ' . (test_mode() ? 'checked' : '') . '> 测试模式（收银台多出「模拟支付成功」选项，仅管理员可见，不扣款）</label>';
         echo '<p class="muted small" style="margin:10px 0 2px">点开每一行可展开该方式的配置；只显示「已启用 + 配置完整」的方式。</p>';
         $enabledIds = pay_enabled_ids();
         $aliOn = in_array('alipay_page', $enabledIds, true) || in_array('alipay_wap', $enabledIds, true) || in_array('alipay_qr', $enabledIds, true);
