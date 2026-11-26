@@ -2198,9 +2198,7 @@ elseif ($path === '/tutorial') {
         $local  = tut_dl_local('Hiddify-Windows-Setup-x64.exe');
         echo '<section class="panel" style="margin-top:26px">';
         echo '<h2 class="tut-h2"><span class="num">1</span> 下载客户端</h2>';
-        echo '<p class="muted small" style="margin:6px 0 0">' . ($local
-            ? '全部来自 Hiddify 官方发布页，安装包已放在本站，下载更快。'
-            : '全部来自 Hiddify 官方 GitHub 发布页，点击会跳转官方下载。') . '</p>';
+        echo '<p class="muted small" style="margin:6px 0 0">选择你正在使用的设备下载安装，装好后看第 3 步导入订阅。</p>';
         echo '<div class="tutdl">';
         echo '<div class="dlcard"><div class="os">🪟 Windows</div><div class="meta">安装版 · x64 · 约 49 MB</div>'
            . '<a class="btn" href="' . e($dlWin) . '"' . ($local ? ' download' : ' target="_blank" rel="noopener"') . '>下载 Windows 版</a></div>';
