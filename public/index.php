@@ -2169,6 +2169,69 @@ elseif (preg_match('#^/admin/order/(\d+)$#', $path, $m)) {
     redirect('/admin/orders' . ($back !== '' ? '?' . $back : ''));
 }
 
+elseif ($path === '/tutorial') {
+    page('使用教程', function () {
+        echo '<section class="hero" style="padding-bottom:4px"><h1>使用教程</h1>';
+        echo '<p class="sub">三步搞定：下载客户端 → 导入订阅 → 一键连接</p></section>';
+
+        echo '<section class="panel" style="margin-top:26px">';
+        echo '<h2 class="tut-h2"><span class="num">1</span> 下载客户端</h2>';
+        echo '<p class="muted small" style="margin:6px 0 0">全部来自 Hiddify 官方 GitHub 发布页 v5.9.15，装机包已放在本站，下载更快。</p>';
+        echo '<div class="tutdl">';
+        echo '<div class="dlcard"><div class="os">🪟 Windows</div><div class="meta">安装版 · x64 · 48.8 MB</div>'
+           . '<a class="btn" href="/downloads/Hiddify-Windows-Setup-x64.exe" download>下载 Windows 版</a></div>';
+        echo '<div class="dlcard"><div class="os">🤖 Android</div><div class="meta">通用版 · Android 5.0+ · 179 MB</div>'
+           . '<a class="btn" href="/downloads/Hiddify-Android-universal.apk" download>下载安卓版</a></div>';
+        echo '<div class="dlcard"><div class="os">🍎 macOS</div><div class="meta">DMG · Intel / Apple 芯片 · 119 MB</div>'
+           . '<a class="btn" href="/downloads/Hiddify-MacOS.dmg" download>下载 Mac 版</a></div>';
+        echo '</div></section>';
+
+        echo '<section class="panel" style="margin-top:18px">';
+        echo '<h2 class="tut-h2"><span class="num">2</span> 拿到你的订阅链接</h2>';
+        echo '<p>付款成功后，订阅链接会自动发到你下单时填写的邮箱，点开邮件里的链接即可复制。</p>';
+        echo '<p>忘了也没关系，点这里随时查：<a class="btn ghost sm" href="/query" style="margin-left:6px">我的订阅</a></p>';
+        echo '<p class="muted small">订阅链接相当于你的账号密码，不要发给别人，泄露了请联系客服重置。</p>';
+        echo '</section>';
+
+        echo '<section class="panel" style="margin-top:18px">';
+        echo '<h2 class="tut-h2"><span class="num">3</span> 导入订阅</h2>';
+
+        echo '<div class="tut-os">Windows</div><ol class="tut-ol">';
+        echo '<li>双击安装包，按提示完成安装，打开 Hiddify。</li>';
+        echo '<li>点左上角的 <b>+</b>，选择「从剪贴板添加」。</li>';
+        echo '<li>粘贴订阅链接，点「添加 / 保存」。</li></ol>';
+
+        echo '<div class="tut-os">macOS</div><ol class="tut-ol">';
+        echo '<li>打开下载的 DMG，把 Hiddify 图标拖进「应用程序」文件夹。</li>';
+        echo '<li>第一次打开如果提示「无法验证开发者」，在应用上点右键 → 打开 → 再点「打开」。</li>';
+        echo '<li>点左上角的 <b>+</b> →「从剪贴板添加」，粘贴订阅链接后保存。</li></ol>';
+
+        echo '<div class="tut-os">Android</div><ol class="tut-ol">';
+        echo '<li>点上面的「下载安卓版」，安装时如果提示「未知来源」，允许本次安装即可。</li>';
+        echo '<li>打开 App，点右下角的 <b>+</b> →「从剪贴板导入」。</li>';
+        echo '<li>粘贴订阅链接，点保存，配置会出现在首页列表。</li></ol>';
+        echo '</section>';
+
+        echo '<section class="panel" style="margin-top:18px">';
+        echo '<h2 class="tut-h2"><span class="num">4</span> 选择节点并连接</h2><ol class="tut-ol">';
+        echo '<li>在列表里挑一个延迟低的节点（点节点右边的闪电图标可以测速，数字越小越快）。</li>';
+        echo '<li>点中间的圆形大按钮开始连接，第一次会弹出「VPN 连接请求」，点「允许 / 确定」。</li>';
+        echo '<li>按钮变成已连接状态后，打开浏览器试试能不能访问 Google、YouTube。</li></ol>';
+        echo '<p class="muted small">电脑端建议开启「系统代理 / TUN 模式」，手机端直接用即可。</p>';
+        echo '</section>';
+
+        echo '<section class="panel tut-faq" style="margin-top:18px">';
+        echo '<h2>常见问题</h2>';
+        echo '<details><summary>连不上或一直转圈？</summary><p>先换一个节点再试；确认订阅还有流量、没有到期；公司或学校网络可能封锁，换手机热点试试。</p></details>';
+        echo '<details><summary>换了新节点，列表没更新？</summary><p>在首页下拉刷新，或点配置右边的刷新按钮重新拉取订阅。</p></details>';
+        echo '<details><summary>一个订阅能同时几台设备？</summary><p>以你购买的套餐说明为准。同一时间设备过多可能触发限速。</p></details>';
+        echo '<details><summary>速度慢怎么办？</summary><p>优先选延迟低的节点；晚高峰可以多试几个地区；下载大文件建议用电脑端。</p></details>';
+        echo '<details><summary>订阅链接能发朋友吗？</summary><p>不建议。链接就是账号凭证，发给别人会占用你的流量，也可能导致账号被封。</p></details>';
+        echo '</section>';
+
+        echo '<p style="text-align:center;margin:28px 0 8px"><a class="btn" href="/">返回首页选购套餐</a></p>';
+    });
+}
 else {
     http_response_code(404);
     page('404', function () { echo '<div class="panel"><h2>页面不存在</h2><p><a href="/">返回首页</a></p></div>'; });

@@ -503,6 +503,27 @@ details.cred .credbody,details.method .methodbody{padding:2px 0 14px}
   .navrow .navdel{grid-column:2;grid-row:1/span 2;height:100%;min-height:44px}
 }
 
+/* ---------- 使用教程 ---------- */
+.tut-h2{display:flex;align-items:center;gap:10px;margin:0 0 6px}
+.num{width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto;font-weight:600}
+.tutdl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:18px 0 4px}
+.dlcard{background:rgba(255,255,255,.05);border:1px solid var(--card-border);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.dlcard .os{font-size:15px;font-weight:700}
+.dlcard .meta{font-size:12px;color:var(--muted)}
+.dlcard .btn{margin-top:12px;justify-content:center}
+.tut-ol{margin:4px 0 0;padding-left:20px}
+.tut-ol li{margin:8px 0;line-height:1.65}
+.tut-os{font-weight:600;margin:16px 0 2px;color:var(--accent)}
+.tut-faq details{border-top:1px solid var(--line);padding:12px 0}
+.tut-faq summary{cursor:pointer;font-weight:600;list-style:none}
+.tut-faq summary::-webkit-details-marker{display:none}
+.tut-faq summary:before{content:"＋";display:inline-block;width:18px;color:var(--accent)}
+.tut-faq details[open] summary:before{content:"－"}
+.tut-faq p{margin:8px 0 0;color:rgba(255,255,255,.75);line-height:1.65}
+@media(max-width:600px){
+  .tutdl{grid-template-columns:1fr}
+}
+
 /* 长链接不再撑破提示框 / 卡片 */
 .alert{overflow-wrap:anywhere;word-break:break-word}
 .alert .mono,.alert a{word-break:break-all}
