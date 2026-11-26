@@ -152,7 +152,8 @@ if ($path === '/') {
         echo '<section class="steps"><h2>购买流程</h2><div class="grid3">';
         echo '<div><b>1</b><h4>选择套餐与地区</h4><p>月付 / 季付 / 年付，选你想要的节点地区。</p></div>';
         echo '<div><b>2</b><h4>扫码支付</h4><p>支付宝 / 微信，支付后自动开通。</p></div>';
-        echo '<div><b>3</b><h4>导入使用</h4><p>复制订阅链接到客户端，一键更新节点。</p></div>';
+        echo '<div><b>3</b><h4>导入使用</h4><p>复制订阅链接到客户端，一键更新节点。</p>'
+           . '<a class="btn ghost sm step-link" href="/tutorial">查看使用教程 →</a></div>';
         echo '</div></section>';
     });
 }

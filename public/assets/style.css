@@ -296,6 +296,7 @@ table tr:hover td{background:rgba(255,255,255,.04)}
 }
 .grid3 h4{margin:0 0 6px;font-size:15px;color:#fff}
 .grid3 p{margin:0;color:rgba(255,255,255,.6);font-size:13.5px}
+.grid3 .step-link{margin-top:14px;display:inline-flex}
 .card.stat{text-align:center;padding:22px 16px}
 .stat .num{font-size:30px;font-weight:800;letter-spacing:-.5px;color:#fff}
 
