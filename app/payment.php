@@ -27,10 +27,12 @@ function epay_sign(array $params, string $key): string {
 function epay_pay_url(array $order, string $payType): string {
     $c = epay_conf(); $base = site_url();
     $params = [
-        'pid' => $c['pid'], 'type' => $payType, 'out_trade_no' => $order['order_no'],
+        'pid' => $c['pid'], 'out_trade_no' => $order['order_no'],
         'notify_url' => $base . '/notify', 'return_url' => $base . '/return',
         'name' => $order['plan_name'], 'money' => money((float)$order['amount']),
     ];
+    // 传空表示不在本站选支付宝/微信，直接进易支付自己的收银台选
+    if ($payType !== '') $params['type'] = $payType;
     $params['sign'] = epay_sign($params, $c['key']);
     $params['sign_type'] = 'MD5';
     return $c['url'] . '/submit.php?' . http_build_query($params);
@@ -422,8 +424,7 @@ function pay_categories(): array {
             'name' => '易支付',
             'desc' => '第三方聚合支付，一套配置同时支持支付宝 / 微信',
             'methods' => [
-                'epay_alipay' => ['name' => '支付宝', 'note' => '易支付通道', 'mode' => 'redirect', 'ready' => epay_enabled()],
-                'epay_wxpay'  => ['name' => '微信支付', 'note' => '易支付通道', 'mode' => 'redirect', 'ready' => epay_enabled()],
+                'epay' => ['name' => '易支付', 'note' => '跳转后选择支付宝 / 微信', 'mode' => 'redirect', 'ready' => epay_enabled()],
             ],
         ],
         'alipay' => [
@@ -461,9 +462,13 @@ function pay_enabled_ids(): array {
         // 只有从未保存过渠道设置的老站点才自动启用易支付；
         // 管理员在后台手动取消勾选并保存后（pay_channels_set=1）必须保持全部关闭。
         if (setting('pay_channels_set', '0') === '1') return [];
-        return epay_enabled() ? ['epay_alipay', 'epay_wxpay'] : [];
+        return epay_enabled() ? ['epay'] : [];
     }
-    return array_values(array_filter(array_map('trim', explode(',', $v))));
+    $ids = array_values(array_filter(array_map('trim', explode(',', $v))));
+    // 兼容旧数据：epay_alipay / epay_wxpay 合并为单一 epay
+    if (in_array('epay_alipay', $ids, true) || in_array('epay_wxpay', $ids, true)) $ids[] = 'epay';
+    $ids = array_values(array_unique(array_diff($ids, ['epay_alipay', 'epay_wxpay'])));
+    return $ids;
 }
 function pay_available(): array {
     $ids = pay_enabled_ids();

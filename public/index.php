@@ -341,6 +341,8 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
         if (!isset($avail[$chosen])) { flash('该支付方式暂不可用', 'err'); redirect('/pay/' . $o['order_no']); }
         try {
 
+        if ($chosen === 'epay') redirect(epay_pay_url($o, ''));
+        // 兼容旧表单/书签里的两个易支付通道
         if ($chosen === 'epay_alipay') redirect(epay_pay_url($o, 'alipay'));
         if ($chosen === 'epay_wxpay')  redirect(epay_pay_url($o, 'wxpay'));
         if ($chosen === 'alipay_page') redirect(alipay_page_url($o));
@@ -650,6 +652,14 @@ elseif (preg_match('#^/order/([A-Za-z0-9]+)$#', $path, $m)) {
                 'expired' => ['已失效（超过 24 小时未付款）', 'err']];
         [$txt, $cls] = $map[$o['status']] ?? [$o['status'], ''];
         echo '<div class="alert ' . $cls . '">' . e($txt) . '</div>';
+        // 支付完成后自动刷新（覆盖从网关跳回时异步通知还没到的空档）
+        if (in_array($o['status'], ['pending', 'paid'], true)) {
+            echo '<script>(function(){var cur=' . json_encode((string)$o['status']) . ';'
+               . 'setInterval(function(){fetch("/pay/' . e((string)$o['order_no']) . '/status")'
+               . '.then(function(r){return r.json();})'
+               . '.then(function(d){if(d.status&&d.status!==cur){location.reload();}})'
+               . '.catch(function(){});},3000);})();</script>';
+        }
         echo '<div class="kv"><span>订单号</span><b>' . e($o['order_no']) . '</b></div>';
         echo '<div class="kv"><span>套餐</span><b>' . e($o['plan_name']) . '</b></div>';
         if (!empty($o['region'])) echo '<div class="kv"><span>地区</span><b>🌍 ' . e($o['region']) . '</b></div>';
@@ -1586,8 +1596,8 @@ elseif ($path === '/admin/settings') {
             // 支付渠道开关
             $chs = array_values(array_intersect((array)($_POST['pay_channels'] ?? []),
                 ['epay','epay_alipay','epay_wxpay','alipay_page','alipay_wap','alipay_qr','wechat_native','wechat_h5','wechat_jsapi']));
-            if (in_array('epay', $chs, true)) { $chs[] = 'epay_alipay'; $chs[] = 'epay_wxpay'; }
-            $chs = array_values(array_unique($chs));
+            if (in_array('epay_alipay', $chs, true) || in_array('epay_wxpay', $chs, true)) $chs[] = 'epay';
+            $chs = array_values(array_unique(array_diff($chs, ['epay_alipay', 'epay_wxpay'])));
             set_setting('pay_channels', implode(',', $chs));
             set_setting('pay_channels_set', '1');
 
@@ -1764,7 +1774,7 @@ elseif ($path === '/admin/settings') {
         $wxOn  = in_array('wechat_native', $enabledIds, true) || in_array('wechat_h5', $enabledIds, true) || in_array('wechat_jsapi', $enabledIds, true);
 
         /* ---------- 易支付 ---------- */
-        $epayOn = in_array('epay_alipay', $enabledIds, true) || in_array('epay_wxpay', $enabledIds, true);
+        $epayOn = in_array('epay', $enabledIds, true) || in_array('epay_alipay', $enabledIds, true) || in_array('epay_wxpay', $enabledIds, true);
         echo '<details class="fold sub"><summary>易支付 '
            . ($epayOn ? '<span class="pill ok">已启用</span>' : '<span class="pill warn">未配置</span>') . '</summary><div class="foldbody">';
         echo '<p class="muted small" style="margin:0 0 10px">一套配置，启用后收银台同时出现支付宝和微信。</p>';
