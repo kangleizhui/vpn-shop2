@@ -558,9 +558,15 @@ function server_region(array $s): string {
     if (($s['region_auto'] ?? '') !== '') return (string)$s['region_auto'];
     return '未设置';
 }
+function server_city(array $s): string {
+    // 填了自定义地区就不再拼自动检测的城市，避免出现「美国-水牛城 · 多伦多」
+    if (($s['region'] ?? '') !== '') return '';
+    return (string)($s['city'] ?? '');
+}
 function server_label(array $s): string {
     $r = server_region($s);
-    return $r . (!empty($s['city']) ? ' · ' . $s['city'] : '') . '（' . $s['name'] . '）';
+    $c = server_city($s);
+    return $r . ($c !== '' ? ' · ' . $c : '') . '（' . $s['name'] . '）';
 }
 function shop_ready(): bool { return count(all_servers(true)) > 0; }
 

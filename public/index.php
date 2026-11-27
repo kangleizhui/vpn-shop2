@@ -144,7 +144,7 @@ if ($path === '/') {
         } else {
             echo '<section class="regions"><span class="rlabel muted small">可选地区</span>';
             foreach ($servers as $s) {
-                echo '<span class="region-chip">🌍 ' . e(server_region($s)) . ($s['city'] !== '' ? ' · ' . e($s['city']) : '') . '</span>';
+                echo '<span class="region-chip">🌍 ' . e(server_region($s)) . (server_city($s) !== '' ? ' · ' . e(server_city($s)) : '') . '</span>';
             }
             echo '</section>';
         }
@@ -202,14 +202,14 @@ elseif ($path === '/buy') {
             echo '<input type="hidden" name="server_id" value="0">';
             echo '<div class="regionpick">';
             foreach ($servers as $s) {
-                echo '<span class="region-chip">🌍 ' . e(server_region($s)) . ($s['city'] !== '' ? ' · ' . e($s['city']) : '') . '</span>';
+                echo '<span class="region-chip">🌍 ' . e(server_region($s)) . (server_city($s) !== '' ? ' · ' . e(server_city($s)) : '') . '</span>';
             }
             echo '</div>';
         } else {
             echo '<label>选择节点地区</label><div class="regionpick">';
             foreach ($servers as $i => $s) {
                 echo '<label class="pick"><input type="radio" name="server_id" value="' . (int)$s['id'] . '"' . ($i === 0 ? ' checked' : '') . ' required>';
-                echo '<span><b>🌍 ' . e(server_region($s)) . '</b>' . ($s['city'] !== '' ? '<em>' . e($s['city']) . '</em>' : '') . '</span></label>';
+                echo '<span><b>🌍 ' . e(server_region($s)) . '</b>' . (server_city($s) !== '' ? '<em>' . e(server_city($s)) . '</em>' : '') . '</span></label>';
             }
             if (!$servers) echo '<div class="alert warn">暂无可售节点</div>';
             echo '</div>';
@@ -1187,7 +1187,7 @@ elseif ($path === '/admin/servers') {
             $statusTxt = $s['last_status'] === 'ok' ? '<span class="tag provisioned">正常</span>'
                 : ($s['last_status'] === 'fail' ? '<span class="tag failed">异常</span>' : '<span class="tag">未检测</span>');
             echo '<tr><td>' . (int)$s['id'] . '</td>';
-            echo '<td><b>🌍 ' . e(server_region($s)) . '</b>' . ($s['city'] !== '' ? '<div class="small muted">' . e($s['city']) . ($s['country_code'] !== '' ? ' · ' . e($s['country_code']) : '') . '</div>' : '') . '</td>';
+            echo '<td><b>🌍 ' . e(server_region($s)) . '</b>' . (server_city($s) !== '' ? '<div class="small muted">' . e(server_city($s)) . ($s['country_code'] !== '' ? ' · ' . e($s['country_code']) : '') . '</div>' : '') . '</td>';
             echo '<td>' . e($s['name']) . '</td><td class="mono">' . e($host) . '</td>';
             echo '<td>' . $statusTxt . ((int)$s['enabled'] ? '' : ' <span class="tag">已下架</span>') . '</td><td>';
             echo '<a class="btn xs ghost" href="/admin/servers?test=' . (int)$s['id'] . '">测试</a> ';
