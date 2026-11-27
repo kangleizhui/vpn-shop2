@@ -1589,6 +1589,7 @@ elseif ($path === '/admin/settings') {
             if (in_array('epay', $chs, true)) { $chs[] = 'epay_alipay'; $chs[] = 'epay_wxpay'; }
             $chs = array_values(array_unique($chs));
             set_setting('pay_channels', implode(',', $chs));
+            set_setting('pay_channels_set', '1');
 
             // 首页抽屉自定义菜单
             $nt = (array)($_POST['nav_title'] ?? []);

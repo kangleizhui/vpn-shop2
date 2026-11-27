@@ -457,7 +457,12 @@ function pay_channels(): array {
 }
 function pay_enabled_ids(): array {
     $v = trim(setting('pay_channels', ''));
-    if ($v === '') return epay_enabled() ? ['epay_alipay', 'epay_wxpay'] : [];
+    if ($v === '') {
+        // 只有从未保存过渠道设置的老站点才自动启用易支付；
+        // 管理员在后台手动取消勾选并保存后（pay_channels_set=1）必须保持全部关闭。
+        if (setting('pay_channels_set', '0') === '1') return [];
+        return epay_enabled() ? ['epay_alipay', 'epay_wxpay'] : [];
+    }
     return array_values(array_filter(array_map('trim', explode(',', $v))));
 }
 function pay_available(): array {
