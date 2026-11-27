@@ -250,7 +250,7 @@ elseif ($path === '/buy') {
 
     page('购买 ' . $plan['name'], function () use ($plan, $servers, $scope) {
         echo '<div class="panel narrow"><h2>' . e($plan['name']) . '</h2>';
-        echo '<p class="muted">' . e(days_label($plan['days'])) . ' · ' . e($plan['traffic_gb']) . 'GB · ¥' . e(money((float)$plan['price'])) . '</p>';
+        echo '<p class="muted">' . e(days_label($plan['days'])) . ' · ' . e(gb_text($plan['traffic_gb'])) . ' · ¥' . e(money((float)$plan['price'])) . '</p>';
         echo '<form method="post" action="/order">' . csrf_field();
         echo '<input type="hidden" name="plan_id" value="' . (int)$plan['id'] . '">';
 
@@ -291,7 +291,7 @@ elseif ($path === '/order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $planId = (int)($_POST['plan_id'] ?? 0);
     $serverId = (int)($_POST['server_id'] ?? 0);
-    $email  = trim((string)($_POST['email'] ?? ''));
+    $email  = strtolower(trim((string)($_POST['email'] ?? '')));
     $contact = trim((string)($_POST['contact'] ?? ''));
     $st = db()->prepare("SELECT * FROM plans WHERE id=? AND enabled=1");
     $st->execute([$planId]);
@@ -592,11 +592,10 @@ elseif (preg_match('#^/s/([a-f0-9]{16,64})$#', $path, $m)) {
         $accs     = sub_accounts((int)$sub['id']);
     } else {
         $email    = (string)$order['email'];
-        $quota    = (float)$order['traffic_gb'];
-        $used     = (float)$order['used_gb'];
-        $expireTs = trim((string)($order['expire_at'] ?? '')) !== ''
-            ? (strtotime((string)$order['expire_at']) ?: 0)
-            : ((strtotime((string)$order['paid_at']) ?: time()) + (int)$order['days'] * 86400);
+        $eff      = single_effective($order);
+        $quota    = (float)$eff['quota'];
+        $used     = (float)$eff['used'];
+        $expireTs = (int)$eff['expire'];
         $status   = (int)($order['panel_enable'] ?? 1) ? 'active' : 'disabled';
         $planName = (string)$order['plan_name'];
         $accs     = order_accounts((int)$order['id']);
@@ -642,13 +641,13 @@ elseif (preg_match('#^/s/([a-f0-9]{16,64})$#', $path, $m)) {
 
     echo '<div class="substats">';
     echo '<div><span>已用流量</span><b>' . e(number_format($used, 2)) . '<em>GB</em></b></div>';
-    echo '<div><span>剩余流量</span><b>' . e(number_format($left, 2)) . '<em>GB</em></b></div>';
+    echo '<div><span>剩余流量</span><b>' . ($quota > 0 ? e(number_format($left, 2)) . '<em>GB</em>' : '不限量') . '</b></div>';
     echo '<div><span>到期时间</span><b class="sm">' . e(expire_label($expireTs, (int)$order['days'])) . '</b></div>';
     echo '<div><span>剩余天数</span><b>' . (is_no_expire((int)$order['days']) ? '不限时' : ($daysLeft >= 0 ? $daysLeft . '<em>天</em>' : '—')) . '</b></div>';
     echo '</div>';
 
     echo '<div class="progress big"><i class="' . $barCls . '" style="width:' . pct_width($pct) . '"></i></div>';
-    echo '<div class="muted small" style="margin-top:8px">已用 ' . e(number_format($used, 2)) . ' / ' . e(number_format($quota, 0)) . ' GB（' . pct_text($pct) . '）';
+    echo '<div class="muted small" style="margin-top:8px">' . ($quota > 0 ? '已用 ' . e(number_format($used, 2)) . ' / ' . e(number_format($quota, 0)) . ' GB（' . pct_text($pct) . '）' : '已用 ' . e(number_format($used, 2)) . ' GB（不限量）');
     if ($nodeCount > 0) echo ' · ' . $nodeCount . ' 条节点' . ($regions ? ' · ' . e(implode(' / ', array_keys($regions))) : '');
     echo '</div>';
     echo '</div>';
@@ -739,10 +738,10 @@ elseif (preg_match('#^/order/([A-Za-z0-9]+)$#', $path, $m)) {
             $isPool   = ($o['note'] ?? '') === 'pool' && !empty($o['sub_id']);
             $sb       = $isPool ? get_sub((int)$o['sub_id']) : null;
 
-            $quota    = $sb ? (float)$sb['quota_gb'] : (float)$o['traffic_gb'];
-            $used     = $sb ? (float)$sb['used_gb']  : (float)$o['used_gb'];
-            $expireTs = $sb ? (strtotime((string)$sb['expire_at']) ?: 0)
-                            : ((strtotime((string)$o['paid_at']) ?: time()) + (int)$o['days'] * 86400);
+            $eff      = $sb ? null : single_effective($o);
+            $quota    = $sb ? (float)$sb['quota_gb'] : (float)$eff['quota'];
+            $used     = $sb ? (float)$sb['used_gb']  : (float)$eff['used'];
+            $expireTs = $sb ? (strtotime((string)$sb['expire_at']) ?: 0) : (int)$eff['expire'];
             $st       = $sb['status'] ?? 'active';
             $stTxt    = ['active' => '正常', 'exhausted' => '流量已用尽', 'expired' => '已到期'][$st] ?? $st;
             $stCls    = $st === 'active' ? 'ok' : 'bad';
@@ -770,12 +769,12 @@ elseif (preg_match('#^/order/([A-Za-z0-9]+)$#', $path, $m)) {
 
             echo '<div class="substats">';
             echo '<div><span>已用流量</span><b>' . e(number_format($used, 2)) . '<em>GB</em></b></div>';
-            echo '<div><span>剩余流量</span><b>' . e(number_format($left, 2)) . '<em>GB</em></b></div>';
+            echo '<div><span>剩余流量</span><b>' . ($quota > 0 ? e(number_format($left, 2)) . '<em>GB</em>' : '不限量') . '</b></div>';
             echo '<div><span>到期时间</span><b class="sm">' . e(expire_label($expireTs, (int)$o['days'])) . '</b></div>';
             echo '<div><span>剩余天数</span><b>' . (is_no_expire((int)$o['days']) ? '不限时' : ($daysLeft >= 0 ? $daysLeft . '<em>天</em>' : '—')) . '</b></div>';
             echo '</div>';
             echo '<div class="progress big"><i class="' . $bar . '" style="width:' . pct_width($pct) . '"></i></div>';
-            echo '<div class="muted small" style="margin-top:8px">共 ' . e(number_format($quota, 0)) . ' GB，已用 ' . pct_text($pct) . ' · ' . $nodeCnt . ' 条节点'
+            echo '<div class="muted small" style="margin-top:8px">' . ($quota > 0 ? '共 ' . e(number_format($quota, 0)) . ' GB，已用 ' . pct_text($pct) : '不限量，已用 ' . e(number_format($used, 2)) . ' GB') . ' · ' . $nodeCnt . ' 条节点'
                . ($regions ? ' · ' . e(implode(' / ', array_keys($regions))) : '') . '</div>';
 
             echo '<h3 style="margin-top:24px">扫码导入</h3>';
@@ -806,10 +805,10 @@ elseif (preg_match('#^/order/([A-Za-z0-9]+)$#', $path, $m)) {
 
 elseif ($path === '/query') {
     expire_stale_orders();
-    $email = trim((string)($_GET['email'] ?? ''));
+    $email = strtolower(trim((string)($_GET['email'] ?? '')));
     $rows = [];
     if ($email !== '') {
-        $st = db()->prepare("SELECT * FROM orders WHERE email=? AND status<>'expired' ORDER BY id DESC LIMIT 20");
+        $st = db()->prepare("SELECT * FROM orders WHERE LOWER(email)=? AND status<>'expired' ORDER BY id DESC LIMIT 50");
         $st->execute([$email]);
         $rows = $st->fetchAll();
     }
@@ -958,10 +957,22 @@ elseif ($path === '/admin') {
             'edit' => '/admin/subs/' . (int)$sb['id'] . '/edit',
         ];
     }
+    $uuidIdx = [];
     foreach ($singles as $o) {
+        $uk = (string)($o['uuid'] ?? '');
         $base = strtotime((string)($o['paid_at'] ?: $o['created_at'])) ?: 0;
         $exp = trim((string)($o['expire_at'] ?? '')) !== '' ? (strtotime((string)$o['expire_at']) ?: 0)
                                                            : ($base + ((int)$o['days']) * 86400);
+        // 同一面板账号（续费）合并成一行：额度累加、已用取最大值
+        if ($uk !== '' && isset($uuidIdx[$uk])) {
+            $i = $uuidIdx[$uk];
+            $rows[$i]['quota'] += (float)$o['traffic_gb'];
+            $rows[$i]['used']   = max($rows[$i]['used'], (float)$o['used_gb']);
+            if ($exp > $rows[$i]['expire']) $rows[$i]['expire'] = $exp;
+            $q = $rows[$i]['quota']; $u2 = $rows[$i]['used'];
+            $rows[$i]['status'] = $rows[$i]['expire'] < $nowTs ? 'expired' : ($q > 0 && $u2 >= $q ? 'exhausted' : 'active');
+            continue;
+        }
         $rows[] = [
             'kind' => 'single', 'email' => (string)$o['email'], 'label' => (string)$o['region'],
             'used' => (float)$o['used_gb'], 'quota' => (float)$o['traffic_gb'],
@@ -970,6 +981,7 @@ elseif ($path === '/admin') {
             'token' => (string)($o['sub_token'] ?? ''), 'seen' => (string)($o['last_seen'] ?? ''),
             'edit' => '/admin/orders/' . (string)$o['order_no'] . '/edit',
         ];
+        if ($uk !== '') $uuidIdx[$uk] = count($rows) - 1;
     }
     usort($rows, fn($a, $b) => $b['used'] <=> $a['used']);
 
@@ -1026,8 +1038,9 @@ elseif ($path === '/admin') {
     $srvStats = [];
     foreach ($servers as $sv) {
         $sid = (int)$sv['id'];
-        $accN = (int)db()->query("SELECT COUNT(*) FROM sub_accounts WHERE server_id={$sid}")->fetchColumn()
-              + (int)db()->query("SELECT COUNT(*) FROM order_accounts WHERE server_id={$sid}")->fetchColumn();
+        // 同一面板账号可能对应多张续费订单，按 uuid 去重
+        $accN = (int)db()->query("SELECT COUNT(DISTINCT uuid) FROM sub_accounts WHERE server_id={$sid} AND uuid<>''")->fetchColumn()
+              + (int)db()->query("SELECT COUNT(DISTINCT uuid) FROM order_accounts WHERE server_id={$sid} AND uuid<>''")->fetchColumn();
         $srvStats[] = ['srv' => $sv, 'acc' => $accN];
     }
 
@@ -1334,8 +1347,11 @@ elseif ($path === '/admin/users') {
             $exp    = max($exp, (string)$u['pool']['expire_at']);
             $seen   = max($seen, (string)($u['pool']['last_seen'] ?? ''));
         }
+        $seenUuid = [];
         foreach ($u['singles'] as $o) {
-            $used  += (float)$o['used_gb'];
+            $uk = (string)($o['uuid'] ?? '');
+            if ($uk === '' || !isset($seenUuid[$uk])) $used += (float)$o['used_gb'];
+            if ($uk !== '') $seenUuid[$uk] = true;
             $quota += (float)$o['traffic_gb'];
             $e = trim((string)($o['expire_at'] ?? ''));
             if ($e === '') {

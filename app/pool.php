@@ -12,7 +12,8 @@ function get_sub_by_token(string $token): ?array {
     return $st->fetch() ?: null;
 }
 function get_sub_by_email(string $email): ?array {
-    $st = db()->prepare("SELECT * FROM subs WHERE email=? ORDER BY id DESC LIMIT 1"); $st->execute([$email]);
+    $email = strtolower(trim($email));
+    $st = db()->prepare("SELECT * FROM subs WHERE LOWER(email)=? ORDER BY id DESC LIMIT 1"); $st->execute([$email]);
     return $st->fetch() ?: null;
 }
 function sub_accounts(int $subId): array {
@@ -109,7 +110,8 @@ function pool_sync(int $subId, bool $enforce = true): array {
     }
 
     $expired = strtotime((string)$sub['expire_at']) < time();
-    $exhausted = $quota > 0 && $total >= $quota;
+    // 用累计已用（含历史），不能用本次同步的增量
+    $exhausted = $quota > 0 && $totalUsed >= $quota;
 
     if (!$enforce) {
         return ['ok' => true, 'used' => $total, 'quota' => $quota, 'actions' => [], 'errors' => $errors];
@@ -131,9 +133,12 @@ function pool_sync(int $subId, bool $enforce = true): array {
         // 每台账号的额度 = 总池 - 其他账号已用（等价于该账号还能用多少）
         $remainDays = max(1, (int)ceil((strtotime((string)$sub['expire_at']) - time()) / 86400));
         foreach ($items as $it) {
-            $others = $total - $it['usage'];
-            $allow = max(0.01, $quota - $others);
-            $need = abs($allow - $it['limit']) > 1.0 || !$it['enabled'] || $it['limit'] <= 0;
+            $others = max(0.0, $totalUsed - $it['usage']);
+            // quota=0 表示不限量：限额置 0（面板按不限处理）
+            $allow = $quota > 0 ? max(0.01, $quota - $others) : 0.0;
+            $need = $quota > 0
+                ? (abs($allow - $it['limit']) > 1.0 || !$it['enabled'] || $it['limit'] <= 0)
+                : (!$it['enabled'] || $it['limit'] > 0);
             if ($need) {
                 try {
                     $it['panel']->updateUser((string)$it['acc']['uuid'], [
@@ -204,8 +209,19 @@ function sync_single_orders(int $limit = 300): array {
     $st = db()->prepare("SELECT * FROM orders WHERE status='provisioned' AND note='single' ORDER BY id DESC LIMIT ?");
     $st->bindValue(1, $limit, PDO::PARAM_INT);
     $st->execute();
-    $out = [];
-    foreach ($st->fetchAll() as $o) $out[] = sync_order_usage($o);
+    $out = []; $done = [];
+    foreach ($st->fetchAll() as $o) {
+        $u = (string)($o['uuid'] ?? '');
+        if ($u !== '' && isset($done[$u])) {
+            // 同一面板账号（续费订单）只拉一次，结果写到这一行
+            db()->prepare("UPDATE orders SET used_gb=?, last_sync=? WHERE id=?")
+                ->execute([(float)$done[$u]['used'], now(), (int)$o['id']]);
+            continue;
+        }
+        $r = sync_order_usage($o);
+        if ($u !== '') $done[$u] = $r;
+        $out[] = $r;
+    }
     return $out;
 }
 
@@ -213,7 +229,11 @@ function sync_single_orders(int $limit = 300): array {
 /** 记录当日累计用量快照（用于趋势图）；同一天只升不降 */
 function stats_snapshot(): void {
     $used = (float)db()->query("SELECT COALESCE(SUM(used_gb),0) FROM subs")->fetchColumn()
-          + (float)db()->query("SELECT COALESCE(SUM(used_gb),0) FROM orders WHERE status IN ('paid','provisioned') AND note='single'")->fetchColumn();
+          + (float)db()->query("SELECT COALESCE(SUM(u),0) FROM (
+                SELECT MAX(used_gb) AS u FROM orders WHERE status IN ('paid','provisioned') AND note='single' AND uuid<>'' GROUP BY uuid
+                UNION ALL
+                SELECT used_gb AS u FROM orders WHERE status IN ('paid','provisioned') AND note='single' AND uuid=''
+            ) t")->fetchColumn();
     $cnt = (int)db()->query("SELECT COUNT(*) FROM orders WHERE status IN ('paid','provisioned')")->fetchColumn();
     $rev = (float)db()->query("SELECT COALESCE(SUM(amount),0) FROM orders WHERE status IN ('paid','provisioned')")->fetchColumn();
     $d = date('Y-m-d');
@@ -245,7 +265,7 @@ function admin_user_input(array $in): array
     }
     $ts = $expire !== '' ? strtotime($expire . ' 23:59:59') : false;
     if (!$ts) throw new InvalidArgumentException('到期时间不正确');
-    return [$email, $note, $limit, date('Y-m-d', $ts), $ts, $on];
+    return [$email, $note, $limit, date('Y-m-d H:i:s', $ts), $ts, $on];
 }
 
 /** 面板用户补丁：显示名 / 备注 / 额度 / 到期 / 启停 */

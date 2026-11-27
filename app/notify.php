@@ -68,7 +68,9 @@ function notify_run(bool $dry = false): array {
     foreach ($orders as $o) {
         $out['checked']++;
         if (empty($o['paid_at'])) continue;
-        $exp  = (strtotime((string)$o['paid_at']) ?: 0) + (int)$o['days'] * 86400;
+        $exp  = trim((string)($o['expire_at'] ?? '')) !== ''
+            ? (strtotime((string)$o['expire_at']) ?: 0)
+            : ((strtotime((string)$o['paid_at']) ?: 0) + (int)$o['days'] * 86400);
         $days = (int)floor(($exp - $now) / 86400);
         $quota = (float)$o['traffic_gb'];
         $used  = (float)$o['used_gb'];

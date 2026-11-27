@@ -106,8 +106,8 @@ function topup_check(string $email): array {
         if (strtotime((string)$sub['expire_at']) < time()) return ['ok' => false, 'msg' => '该订阅已到期，请先续费再买加量包'];
         return ['ok' => true, 'type' => 'pool'];
     }
-    $st = db()->prepare("SELECT * FROM orders WHERE email=? AND status='provisioned' AND note='single' ORDER BY id DESC LIMIT 1");
-    $st->execute([$email]);
+    $st = db()->prepare("SELECT * FROM orders WHERE LOWER(email)=? AND status='provisioned' AND note='single' ORDER BY id DESC LIMIT 1");
+    $st->execute([strtolower($email)]);
     $prev = $st->fetch();
     if (!$prev) return ['ok' => false, 'msg' => '这个邮箱还没有订阅，请先购买套餐'];
     $exp = trim((string)($prev['expire_at'] ?? ''));
@@ -149,8 +149,8 @@ function provision_topup(array $o): array {
     }
 
     // 2) 单地区：最近一个已开通订单
-    $st = db()->prepare("SELECT * FROM orders WHERE email=? AND status='provisioned' AND note='single' ORDER BY id DESC LIMIT 1");
-    $st->execute([$email]);
+    $st = db()->prepare("SELECT * FROM orders WHERE LOWER(email)=? AND status='provisioned' AND note='single' ORDER BY id DESC LIMIT 1");
+    $st->execute([strtolower($email)]);
     $prev = $st->fetch();
     if (!$prev) return ['ok' => false, 'msg' => '该邮箱没有可充值的订阅'];
 
@@ -194,14 +194,41 @@ function mark_paid(string $orderNo, string $tradeNo = '', string $method = ''): 
     if ($o) provision_order((int)$o['id']);
 }
 
+/**
+ * 单地区订单的真实额度/到期/已用。
+ * 同邮箱在同一台服务器续费时复用同一个面板账号（uuid 相同），
+ * 每次续费的订单各占一行，这里按 uuid 合并，避免把一次账号算成多个订单。
+ */
+function single_effective(array $o): array {
+    $rows = [$o];
+    $u = (string)($o['uuid'] ?? '');
+    if ($u !== '') {
+        $st = db()->prepare("SELECT * FROM orders WHERE uuid=? AND note='single' AND status='provisioned'");
+        $st->execute([$u]);
+        $all = $st->fetchAll();
+        if ($all) $rows = $all;
+    }
+    $quota = 0.0; $exp = 0; $used = 0.0;
+    foreach ($rows as $r) {
+        $quota += (float)$r['traffic_gb'];
+        $used = max($used, (float)$r['used_gb']);
+        $e = trim((string)($r['expire_at'] ?? '')) !== ''
+            ? (strtotime((string)$r['expire_at']) ?: 0)
+            : ((strtotime((string)($r['paid_at'] ?: $r['created_at'])) ?: 0) + (int)$r['days'] * 86400);
+        if ($e > $exp) $exp = $e;
+    }
+    if ($quota <= 0) $quota = (float)$o['traffic_gb'];
+    return ['quota' => $quota, 'expire' => $exp, 'used' => $used];
+}
+
 /* ================= 开通 ================= */
 
 /** 找该邮箱在该服务器上最近一次的有效账号 */
 function find_prev_account(string $email, int $serverId): ?array {
     $st = db()->prepare("SELECT oa.* FROM order_accounts oa JOIN orders o ON o.id=oa.order_id
-                         WHERE o.email=? AND oa.server_id=? AND o.status='provisioned' AND oa.uuid<>''
+                         WHERE LOWER(o.email)=? AND oa.server_id=? AND o.status='provisioned' AND oa.uuid<>''
                          ORDER BY oa.id DESC LIMIT 1");
-    $st->execute([$email, $serverId]);
+    $st->execute([strtolower($email), $serverId]);
     return $st->fetch() ?: null;
 }
 
@@ -297,7 +324,8 @@ function provision_pool(array $o): array {
             $st->execute([(int)$sub['id'], (int)$srv['id']]);
             $acc = $st->fetch();
 
-            $allowance = max(0.01, $quota - $used);
+            // quota=0 表示不限量，面板限额传 0
+            $allowance = $quota > 0 ? max(0.01, $quota - $used) : 0.0;
 
             if ($acc && $acc['uuid'] !== '') {
                 try {
@@ -321,7 +349,7 @@ function provision_pool(array $o): array {
             }
 
             $name = 'p' . substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$o['email']), 0, 10) . '-' . substr((string)$sub['token'], 0, 4);
-            $u = $panel->createUser($name, $remainDays, (int)ceil($allowance), (string)$o['email']);
+            $u = $panel->createUser($name, $remainDays, $quota > 0 ? (float)ceil($allowance) : 0.0, (string)$o['email']);
             $uuid = (string)$u['uuid'];
             $subUrl = $panel->subUrl($uuid);
 
@@ -375,6 +403,11 @@ function admin_add_traffic(string $email, float $gb): array {
     $o = get_order($no);
     if (!$o) return ['ok' => false, 'msg' => '订单创建失败'];
     $r = provision_topup($o);
+    if (empty($r['ok'])) {
+        // 没加成功就别留一张「已支付」的空单
+        db()->prepare("UPDATE orders SET status='failed', note=? WHERE id=?")
+            ->execute([mb_substr((string)($r['msg'] ?? '加量失败'), 0, 500), (int)$o['id']]);
+    }
     $r['order_no'] = $no;
     return $r;
 }
