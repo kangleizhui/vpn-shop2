@@ -156,7 +156,7 @@ class HiddifyPanel
         return $out;
     }
 
-    public function createUser(string $name, int $days, int $trafficGb, string $email = ''): array
+    public function createUser(string $name, int $days, float $trafficGb, string $email = ''): array
     {
         $this->login();
         $payload = [

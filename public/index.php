@@ -170,8 +170,8 @@ if ($path === '/') {
             echo '<div class="price"><span class="cur">¥</span>' . e(money((float)$p['price'])) . '</div>';
             $isTop = (($p['kind'] ?? 'normal') === 'topup');
             $pDesc = $p['descr'] !== '' ? $p['descr']
-                   : ($isTop ? '+' . $p['traffic_gb'] . 'GB · 不延长到期'
-                             : ((int)$p['days'] > 0 ? $p['days'] . ' 天 · ' : '不限时 · ') . $p['traffic_gb'] . 'GB');
+                   : ($isTop ? '+' . gb_text($p['traffic_gb']) . ' · 不延长到期'
+                             : ((int)$p['days'] > 0 ? $p['days'] . ' 天 · ' : '不限时 · ') . gb_text($p['traffic_gb']));
             echo '<p class="descr">' . e($pDesc) . '</p>';
             echo '<a class="btn" href="/buy?plan=' . (int)$p['id'] . '">立即购买</a>';
             echo '</div>';
@@ -203,7 +203,7 @@ elseif ($path === '/buy') {
         echo '<input type="hidden" name="plan_id" value="' . (int)$plan['id'] . '">';
 
         if (($plan['kind'] ?? 'normal') === 'topup') {
-            echo '<div class="alert ok">流量加量包：只增加 <b>' . (int)$plan['traffic_gb'] . ' GB</b> 流量，<b>到期时间不变</b>，不延长天数。</div>';
+            echo '<div class="alert ok">流量加量包：只增加 <b>' . gb_text($plan['traffic_gb']) . '</b> 流量，<b>到期时间不变</b>，不延长天数。</div>';
             echo '<label>邮箱（必须是已购买套餐的邮箱）<input type="email" name="email" required placeholder="you@example.com"></label>';
             echo '<label>联系方式（选填，QQ/微信）<input type="text" name="contact" placeholder="方便售后联系"></label>';
             echo '<button class="btn wide" type="submit">提交订单</button></form></div>';
@@ -252,7 +252,7 @@ elseif ($path === '/order' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $no = order_no();
         $ins = db()->prepare("INSERT INTO orders (order_no,plan_id,plan_name,days,traffic_gb,amount,email,contact,status,created_at,server_id,region,note)
                               VALUES (?,?,?,?,?,?,?,?,'pending',?,0,'加量包','topup')");
-        $ins->execute([$no, (int)$plan['id'], (string)$plan['name'], 0, (int)$plan['traffic_gb'], (float)$plan['price'],
+        $ins->execute([$no, (int)$plan['id'], (string)$plan['name'], 0, (float)$plan['traffic_gb'], (float)$plan['price'],
                        $email, $contact, now()]);
         redirect('/pay/' . $no);
     }
@@ -423,7 +423,7 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
                 echo '</div>';
             }
             if (test_mode() && is_admin()) mock_pay_box($o['order_no']);
-            echo '<p class="muted center small">支付完成后自动开通，无需手动刷新。</p>';
+            echo '<p class="muted center small">支付完成后自动开通</p>';
         }
         echo '</div>';
     });
@@ -671,7 +671,7 @@ elseif (preg_match('#^/order/([A-Za-z0-9]+)$#', $path, $m)) {
         }
 
         if (($o['note'] ?? '') === 'topup' && $o['status'] === 'provisioned') {
-            echo '<div class="alert ok">流量加量包已到账：<b>+' . (int)$o['traffic_gb'] . ' GB</b>，原订阅的到期时间不变。</div>';
+            echo '<div class="alert ok">流量加量包已到账：<b>+' . gb_text($o['traffic_gb']) . '</b>，原订阅的到期时间不变。</div>';
             $sid = (int)($o['sub_id'] ?? 0);
             if ($sid > 0) {
                 $sbT = get_sub($sid);
@@ -1998,7 +1998,7 @@ elseif ($path === '/admin/plans') {
             $sc = $isTop ? '<span class="tag">加量包</span>'
                          : (($p['scope'] ?? 'single') === 'all' ? '<span class="tag provisioned">全地区</span>' : '<span class="tag">单地区</span>');
             echo '<tr><td>' . (int)$p['id'] . '</td><td>' . e($p['name']) . '</td><td>' . $sc . '</td><td>' . ($isTop ? '—' : e(days_label($p['days']))) . '</td>';
-            echo '<td>' . (int)$p['traffic_gb'] . '</td><td>¥' . e(money((float)$p['price'])) . '</td>';
+            echo '<td>' . e(gb_text($p['traffic_gb'])) . '</td><td>¥' . e(money((float)$p['price'])) . '</td>';
             echo '<td>' . ((int)$p['enabled'] ? '上架' : '下架') . '</td><td>';
             echo '<form method="post" class="inline">' . csrf_field() . '<input type="hidden" name="act" value="toggle"><input type="hidden" name="id" value="' . (int)$p['id'] . '"><button class="btn xs">切换</button></form> ';
             echo '<form method="post" class="inline" data-confirm="确定删除这个套餐？">' . csrf_field() . '<input type="hidden" name="act" value="del"><input type="hidden" name="id" value="' . (int)$p['id'] . '"><button class="btn xs danger">删除</button></form>';
@@ -2016,10 +2016,13 @@ elseif ($path === '/admin/plans/new') {
         $name  = trim((string)($_POST['name'] ?? ''));
         $kind  = (($_POST['kind'] ?? 'normal') === 'topup') ? 'topup' : 'normal';
         $pDays = $kind === 'topup' ? 0 : (isset($_POST['no_expire']) ? 0 : max(1, (int)($_POST['days'] ?? 30)));
-        $gb    = (int)($_POST['traffic_gb'] ?? 0);
+        $gbRaw = (float)($_POST['traffic_gb'] ?? 0);
+        $gbUnit = (($_POST['traffic_unit'] ?? 'gb') === 'mb') ? 'mb' : 'gb';
+        $gb    = round($gbUnit === 'mb' ? $gbRaw / 1024 : $gbRaw, 4);
         $price = (float)($_POST['price'] ?? 0);
         if ($name === '')      $err = '套餐名称不能为空';
-        elseif ($gb < 1)       $err = '流量必须大于 0';
+        elseif ($gbRaw <= 0)   $err = '流量必须大于 0';
+        elseif ($gb <= 0)      $err = '流量太小了（最小 1MB）';
         elseif ($price < 0)    $err = '价格不能为负数';
         else {
             $st = db()->prepare("INSERT INTO plans (name,days,traffic_gb,price,enabled,sort,badge,descr,scope,kind) VALUES (?,?,?,?,?,?,?,?,?,?)");
@@ -2045,7 +2048,8 @@ elseif ($path === '/admin/plans/new') {
         echo '<label>套餐类型<select name="kind" id="plankind" data-nice onchange="planKindUI()"><option value="normal"' . ((($_POST['kind'] ?? 'normal') === 'normal') ? ' selected' : '') . '>普通套餐（新开 / 续费）</option><option value="topup"' . ((($_POST['kind'] ?? '') === 'topup') ? ' selected' : '') . '>流量加量包（只加流量，不延长到期）</option></select></label>';
         echo '<div class="row2"><label>名称<input type="text" name="name" required value="' . $v('name') . '"></label><label>排序<input name="sort" type="number" value="' . $v('sort', '0') . '"></label></div>';
         echo '<label class="row" id="planNoExpireWrap" style="margin:8px 0"><input type="checkbox" name="no_expire" value="1"' . (isset($_POST['no_expire']) ? ' checked' : '') . ' onchange="var w=document.getElementById(\'planDaysWrap\'),d=document.getElementById(\'plandays\');w.style.display=this.checked?\'none\':\'\';w.parentElement.style.gridTemplateColumns=this.checked?\'1fr\':\'\';d.disabled=this.checked;d.required=!this.checked;"> 纯流量套餐（不设到期时间，流量用完为止）</label>';
-        echo '<div class="row2"><label id="planDaysWrap">天数<input name="days" id="plandays" type="number" value="' . $v('days', '30') . '" required></label><label>流量GB<input name="traffic_gb" type="number" value="' . $v('traffic_gb', '100') . '" required></label></div>';
+        echo '<div class="row2"><label id="planDaysWrap">天数<input name="days" id="plandays" type="number" value="' . $v('days', '30') . '" required></label><label>流量数量<input name="traffic_gb" type="number" step="0.001" min="0.001" value="' . $v('traffic_gb', '100') . '" required placeholder="可填 0.5 / 0.001"></label></div>';
+        echo '<label>流量单位<select name="traffic_unit" data-nice><option value="gb"' . ((($_POST['traffic_unit'] ?? 'gb') === 'gb') ? ' selected' : '') . '>GB（1 GB = 1024 MB）</option><option value="mb"' . ((($_POST['traffic_unit'] ?? '') === 'mb') ? ' selected' : '') . '>MB</option></select></label>';
         echo '<div class="row2"><label>价格<input name="price" type="number" step="0.01" value="' . $v('price', '9.90') . '" required></label><label>角标<input type="text" name="badge" placeholder="推荐" value="' . $v('badge') . '"></label></div>';
         echo '<label id="planScopeWrap">节点范围<select name="scope" data-nice><option value="single"' . ((($_POST['scope'] ?? 'single') === 'single') ? ' selected' : '') . '>单地区（用户选择一个地区）</option><option value="all"' . ((($_POST['scope'] ?? '') === 'all') ? ' selected' : '') . '>全地区（包含所有服务器，一个订阅链接）</option></select></label>';
         echo '<label>描述<input type="text" name="descr" placeholder="100GB / 30天，纯流量填 100GB / 不限时" value="' . $v('descr') . '"></label>';

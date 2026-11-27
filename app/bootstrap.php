@@ -219,7 +219,7 @@ function init_schema_sqlite(PDO $pdo): void {
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL, days INTEGER NOT NULL, traffic_gb INTEGER NOT NULL DEFAULT 0,
+        name TEXT NOT NULL, days INTEGER NOT NULL, traffic_gb REAL NOT NULL DEFAULT 0,
         price REAL NOT NULL, enabled INTEGER NOT NULL DEFAULT 1, sort INTEGER NOT NULL DEFAULT 0,
         badge TEXT NOT NULL DEFAULT '', descr TEXT NOT NULL DEFAULT '',
         scope TEXT NOT NULL DEFAULT 'single'
@@ -231,7 +231,7 @@ function init_schema_sqlite(PDO $pdo): void {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         order_no TEXT NOT NULL UNIQUE,
         plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL,
-        days INTEGER NOT NULL, traffic_gb INTEGER NOT NULL DEFAULT 0,
+        days INTEGER NOT NULL, traffic_gb REAL NOT NULL DEFAULT 0,
         amount REAL NOT NULL,
         email TEXT NOT NULL DEFAULT '', contact TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'pending',
@@ -334,7 +334,7 @@ function init_schema_mysql(PDO $pdo): void {
         id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         days INT NOT NULL,
-        traffic_gb INT NOT NULL DEFAULT 0,
+        traffic_gb DECIMAL(12,4) NOT NULL DEFAULT 0,
         price DOUBLE NOT NULL,
         enabled TINYINT NOT NULL DEFAULT 1,
         sort INT NOT NULL DEFAULT 0,
@@ -349,7 +349,7 @@ function init_schema_mysql(PDO $pdo): void {
         plan_id INT NOT NULL,
         plan_name VARCHAR(100) NOT NULL,
         days INT NOT NULL,
-        traffic_gb INT NOT NULL DEFAULT 0,
+        traffic_gb DECIMAL(12,4) NOT NULL DEFAULT 0,
         amount DOUBLE NOT NULL,
         email VARCHAR(191) NOT NULL DEFAULT '',
         contact VARCHAR(191) NOT NULL DEFAULT '',
@@ -452,6 +452,15 @@ function set_setting(string $k, string $v): void {
     }
     $st->execute([$k, $v]);
     $GLOBALS['__settings_cache'][$k] = $v;
+}
+function gb_text($gb): string {
+    $gb = (float)$gb;
+    if ($gb <= 0) return '0';
+    if ($gb < 1) {
+        $mb = (int)round($gb * 1024);
+        return max(1, $mb) . ' MB';
+    }
+    return rtrim(rtrim(number_format($gb, 3, '.', ''), '0'), '.') . ' GB';
 }
 function has_admin(): bool { return setting('admin_user') !== '' && setting('admin_hash') !== ''; }
 

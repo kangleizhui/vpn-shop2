@@ -101,7 +101,7 @@ function alipay_page_url(array $o): string {
     $p = alipay_params('alipay.trade.page.pay', [
         'out_trade_no' => $o['order_no'],
         'total_amount' => number_format((float)$o['amount'], 2, '.', ''),
-        'subject'      => mb_substr((string)$o['plan_name'], 0, 120),
+        'subject'      => '商品购物',
         'product_code' => 'FAST_INSTANT_TRADE_PAY',
     ], ['return_url' => site_base() . '/return'], 'alipay_page');
     return alipay_conf('alipay_page')['gateway'] . '?' . http_build_query($p);
@@ -112,7 +112,7 @@ function alipay_wap_url(array $o): string {
     $p = alipay_params('alipay.trade.wap.pay', [
         'out_trade_no' => $o['order_no'],
         'total_amount' => number_format((float)$o['amount'], 2, '.', ''),
-        'subject'      => mb_substr((string)$o['plan_name'], 0, 120),
+        'subject'      => '商品购物',
         'product_code' => 'QUICK_WAP_WAY',
         'quit_url'     => site_base() . '/order/' . $o['order_no'],
     ], ['return_url' => site_base() . '/return'], 'alipay_wap');
@@ -124,7 +124,7 @@ function alipay_precreate(array $o): array {
     $biz = [
         'out_trade_no' => $o['order_no'],
         'total_amount' => number_format((float)$o['amount'], 2, '.', ''),
-        'subject'      => mb_substr((string)$o['plan_name'], 0, 120),
+        'subject'      => '商品购物',
     ];
     $store = trim(setting('alipay_qr_store_id'));
     if ($store !== '') $biz['store_id'] = $store;

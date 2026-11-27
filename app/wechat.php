@@ -60,7 +60,7 @@ function wechat_native(array $o): array {
     $body = json_encode([
         'appid'       => $c['appid'],
         'mchid'       => $c['mchid'],
-        'description' => mb_substr((string)$o['plan_name'], 0, 100),
+        'description' => '商品购物',
         'out_trade_no'=> (string)$o['order_no'],
         'notify_url'  => site_base() . '/notify/wechat',
         'amount'      => ['total' => (int)round((float)$o['amount'] * 100), 'currency' => 'CNY'],
@@ -81,7 +81,7 @@ function wechat_h5(array $o, string $ip): array {
     $body = json_encode([
         'appid'       => $c['appid'],
         'mchid'       => $c['mchid'],
-        'description' => mb_substr((string)$o['plan_name'], 0, 100),
+        'description' => '商品购物',
         'out_trade_no'=> (string)$o['order_no'],
         'notify_url'  => site_base() . '/notify/wechat',
         'amount'      => ['total' => (int)round((float)$o['amount'] * 100), 'currency' => 'CNY'],
@@ -110,7 +110,7 @@ function wechat_jsapi_order(array $o, string $openid): array {
     $body = json_encode([
         'appid'       => $c['appid'],
         'mchid'       => $c['mchid'],
-        'description' => mb_substr((string)$o['plan_name'], 0, 100),
+        'description' => '商品购物',
         'out_trade_no'=> (string)$o['order_no'],
         'notify_url'  => site_base() . '/notify/wechat',
         'amount'      => ['total' => (int)round((float)$o['amount'] * 100), 'currency' => 'CNY'],

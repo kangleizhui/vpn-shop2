@@ -29,7 +29,7 @@ function epay_pay_url(array $order, string $payType): string {
     $params = [
         'pid' => $c['pid'], 'out_trade_no' => $order['order_no'],
         'notify_url' => $base . '/notify', 'return_url' => $base . '/return',
-        'name' => $order['plan_name'], 'money' => money((float)$order['amount']),
+        'name' => '商品购物', 'money' => money((float)$order['amount']),
     ];
     // 传空表示不在本站选支付宝/微信，直接进易支付自己的收银台选
     if ($payType !== '') $params['type'] = $payType;
@@ -231,7 +231,7 @@ function provision_on_server(array $o, array $srv): array {
     }
 
     $name = 'u' . substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$o['email']), 0, 10) . '-' . substr((string)$o['order_no'], -4);
-    $u = $panel->createUser($name, (int)$o['days'], (int)$o['traffic_gb'], (string)$o['email']);
+    $u = $panel->createUser($name, (int)$o['days'], (float)$o['traffic_gb'], (string)$o['email']);
     return ['uuid' => (string)$u['uuid'], 'sub_url' => $panel->subUrl((string)$u['uuid']), 'action' => 'new'];
 }
 
