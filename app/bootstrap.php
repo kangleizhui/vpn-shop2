@@ -460,6 +460,11 @@ function gb_text($gb): string {
         $mb = (int)round($gb * 1024);
         return max(1, $mb) . ' MB';
     }
+    if ($gb >= 1024) {
+        $tb = round($gb / 1024, 2);
+        // 只有换算回去不丢精度才用 TB 显示（1500GB 仍显示 1500 GB，1536GB 显示 1.5 TB）
+        if (abs($tb * 1024 - $gb) < 1) return rtrim(rtrim(number_format($tb, 2, '.', ''), '0'), '.') . ' TB';
+    }
     return rtrim(rtrim(number_format($gb, 3, '.', ''), '0'), '.') . ' GB';
 }
 function has_admin(): bool { return setting('admin_user') !== '' && setting('admin_hash') !== ''; }
