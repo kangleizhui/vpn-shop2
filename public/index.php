@@ -55,8 +55,8 @@ function mock_pay_box(string $orderNo): void {
     echo '<button class="btn wide" type="submit">模拟支付成功<span class="muted small" style="margin-left:8px">仅管理员 · 不扣款</span></button>';
     echo '</form></div>';
 }
-function server_edit_form(?array $edit): void {
-    echo '<div class="panel" id="srvform"><h3>' . ($edit ? '编辑服务器 #' . (int)$edit['id'] : '添加服务器') . '</h3><form method="post">' . csrf_field();
+function server_edit_form(?array $edit, string $action = ''): void {
+    echo '<div class="panel" id="srvform">' . ($action === '' ? '<h3>' . ($edit ? '编辑服务器 #' . (int)$edit['id'] : '添加服务器') . '</h3>' : '') . '<form method="post"' . ($action !== '' ? ' action="' . e($action) . '"' : '') . '>' . csrf_field();
     echo '<input type="hidden" name="act" value="' . ($edit ? 'edit' : 'add') . '">';
     if ($edit) echo '<input type="hidden" name="id" value="' . (int)$edit['id'] . '">';
     echo '<label>管理地址（完整链接，含 UUID）<input type="text" name="admin_url" required value="' . e($edit['admin_url'] ?? '') . '" placeholder="https://域名/后台路径/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label>';
@@ -1079,6 +1079,16 @@ elseif ($path === '/admin/dashboard') {
 }
 
 /* ---------- 服务器管理 ---------- */
+elseif (preg_match('#^/admin/servers/(\d+)/edit$#', $path, $m)) {
+    require_admin();
+    $srv = get_server((int)$m[1]);
+    if (!$srv) { http_response_code(404); exit('服务器不存在'); }
+    page('编辑服务器', function () use ($srv) {
+        echo '<div class="actions" style="justify-content:space-between;align-items:center"><h2 style="margin:0">编辑服务器 #' . (int)$srv['id'] . '</h2><a class="btn ghost sm" href="/admin/servers">返回列表</a></div>';
+        server_edit_form($srv, '/admin/servers');
+    });
+}
+
 elseif ($path === '/admin/servers') {
     require_admin();
 
@@ -1182,10 +1192,9 @@ elseif ($path === '/admin/servers') {
             return true;
         }));
     }
-    $editSrv = isset($_GET['edit']) ? get_server((int)$_GET['edit']) : null;
-    page('服务器管理', function () use ($servers, $sq, $sst, $editSrv) {
+    if (isset($_GET['edit'])) redirect('/admin/servers/' . (int)$_GET['edit'] . '/edit');
+    page('服务器管理', function () use ($servers, $sq, $sst) {
         echo '<h2>服务器管理</h2>';
-        if ($editSrv) server_edit_form($editSrv);
         echo '<form method="get" action="/admin/servers" class="panel filterbar cols2">';
         echo '<label>关键词<input type="text" name="q" value="' . e($sq) . '" placeholder="地区 / 名称 / 城市 / 域名"></label>';
         echo '<label>状态<select name="st" data-nice><option value="">全部状态</option>';
@@ -1207,14 +1216,14 @@ elseif ($path === '/admin/servers') {
             echo '<td>' . $statusTxt . ((int)$s['enabled'] ? '' : ' <span class="tag">已下架</span>') . '</td><td>';
             echo '<a class="btn xs ghost" href="/admin/servers?test=' . (int)$s['id'] . '">测试</a> ';
             echo '<a class="btn xs ghost" href="/admin/servers?detect=' . (int)$s['id'] . '">检测地区</a> ';
-            echo '<a class="btn xs ghost" href="/admin/servers?edit=' . (int)$s['id'] . '">编辑</a> ';
+            echo '<a class="btn xs ghost" href="/admin/servers/' . (int)$s['id'] . '/edit">编辑</a> ';
             echo '<form method="post" class="inline">' . csrf_field() . '<input type="hidden" name="act" value="toggle"><input type="hidden" name="id" value="' . (int)$s['id'] . '"><button class="btn xs">上/下架</button></form> ';
             echo '<form method="post" class="inline" data-confirm="确定删除这台服务器？">' . csrf_field() . '<input type="hidden" name="act" value="del"><input type="hidden" name="id" value="' . (int)$s['id'] . '"><button class="btn xs danger">删除</button></form>';
             echo '</td></tr>';
         }
         echo '</table>';
 
-        if (!$editSrv) server_edit_form(null);
+        server_edit_form(null);
     });
 }
 
