@@ -386,7 +386,7 @@ elseif (preg_match('#^/pay/([A-Za-z0-9]+)$#', $path, $m)) {
             echo '<div class="qrpay"><div id="payqr"></div></div>';
             echo '<div class="copybox"><input id="qrtext" readonly value="' . e($qr) . '"><button class="btn sm" type="button" onclick="copyQr(this)">复制</button></div>';
             echo '<p class="muted center">请用' . e($label) . '扫描二维码支付 ¥' . e(money((float)$o['amount'])) . '，支付成功后自动开通。</p>';
-            echo '<p class="muted center small">页面会自动检测支付结果，无需手动刷新。</p>';
+            echo '<p class="muted center small">支付完成后自动开通</p>';
             echo '<script src="/assets/qrcode.min.js"></script>';
             echo '<script>(function(){var el=document.getElementById("payqr");if(el&&window.QRCode){new QRCode(el,{text:document.getElementById("qrtext").value,width:220,height:220,correctLevel:QRCode.CorrectLevel.M});}'
                . 'setInterval(function(){fetch("/pay/' . e($o['order_no']) . '/status?ch=' . e($chosen) . '").then(function(r){return r.json();}).then(function(d){if(d.paid){location.href="/order/' . e($o['order_no']) . '";}});},3000);'
