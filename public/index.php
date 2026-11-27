@@ -55,6 +55,19 @@ function mock_pay_box(string $orderNo): void {
     echo '<button class="btn wide" type="submit">模拟支付成功<span class="muted small" style="margin-left:8px">仅管理员 · 不扣款</span></button>';
     echo '</form></div>';
 }
+function server_edit_form(?array $edit): void {
+    echo '<div class="panel" id="srvform"><h3>' . ($edit ? '编辑服务器 #' . (int)$edit['id'] : '添加服务器') . '</h3><form method="post">' . csrf_field();
+    echo '<input type="hidden" name="act" value="' . ($edit ? 'edit' : 'add') . '">';
+    if ($edit) echo '<input type="hidden" name="id" value="' . (int)$edit['id'] . '">';
+    echo '<label>管理地址（完整链接，含 UUID）<input type="text" name="admin_url" required value="' . e($edit['admin_url'] ?? '') . '" placeholder="https://域名/后台路径/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label>';
+    echo '<label>管理员密码' . ($edit ? '（留空不修改）' : '') . '<input type="password" name="password" ' . ($edit ? '' : 'required') . '></label>';
+    echo '<div class="row2"><label>显示名称<input type="text" name="name" value="' . e($edit['name'] ?? '') . '" placeholder="如：日本-东京"></label>';
+    echo '<label>自定义地区（留空自动检测）<input type="text" name="region" value="' . e($edit['region'] ?? '') . '" placeholder="如：日本"></label></div>';
+    echo '<label>面板时区（小时，留空自动检测）<input type="text" name="tz_offset_h" value="' . e($edit ? setting('server_tz_h_' . (int)$edit['id']) : '') . '" placeholder="如 8 / 9 / -5 / 3.5"></label>';
+    echo '<div class="row2"><label>排序<input type="number" name="sort" value="' . (int)($edit['sort'] ?? 0) . '"></label>';
+    echo '<label class="row" style="margin-top:34px"><input type="checkbox" name="enabled" value="1" ' . (!isset($edit['enabled']) || (int)$edit['enabled'] ? 'checked' : '') . '> 上架销售</label></div>';
+    echo '<button class="btn">' . ($edit ? '保存修改' : '添加') . '</button></form></div>';
+}
 function drawer_script(): void {
     echo '<script>(function(){var b=document.getElementById("menubtn"),d=document.getElementById("drawer"),m=document.getElementById("menumask");'
        . 'if(!b||!d)return;function tog(v){var on=(v===undefined)?!d.classList.contains("on"):v;d.classList.toggle("on",on);m.classList.toggle("on",on);b.setAttribute("aria-expanded",on?"true":"false");document.body.style.overflow=on?"hidden":"";}'
@@ -1169,8 +1182,10 @@ elseif ($path === '/admin/servers') {
             return true;
         }));
     }
-    page('服务器管理', function () use ($servers, $sq, $sst) {
+    $editSrv = isset($_GET['edit']) ? get_server((int)$_GET['edit']) : null;
+    page('服务器管理', function () use ($servers, $sq, $sst, $editSrv) {
         echo '<h2>服务器管理</h2>';
+        if ($editSrv) server_edit_form($editSrv);
         echo '<form method="get" action="/admin/servers" class="panel filterbar cols2">';
         echo '<label>关键词<input type="text" name="q" value="' . e($sq) . '" placeholder="地区 / 名称 / 城市 / 域名"></label>';
         echo '<label>状态<select name="st" data-nice><option value="">全部状态</option>';
@@ -1199,18 +1214,7 @@ elseif ($path === '/admin/servers') {
         }
         echo '</table>';
 
-        $edit = isset($_GET['edit']) ? get_server((int)$_GET['edit']) : null;
-        echo '<div class="panel"><h3>' . ($edit ? '编辑服务器 #' . (int)$edit['id'] : '添加服务器') . '</h3><form method="post">' . csrf_field();
-        echo '<input type="hidden" name="act" value="' . ($edit ? 'edit' : 'add') . '">';
-        if ($edit) echo '<input type="hidden" name="id" value="' . (int)$edit['id'] . '">';
-        echo '<label>管理地址（完整链接，含 UUID）<input type="text" name="admin_url" required value="' . e($edit['admin_url'] ?? '') . '" placeholder="https://域名/后台路径/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"></label>';
-        echo '<label>管理员密码' . ($edit ? '（留空不修改）' : '') . '<input type="password" name="password" ' . ($edit ? '' : 'required') . '></label>';
-        echo '<div class="row2"><label>显示名称<input type="text" name="name" value="' . e($edit['name'] ?? '') . '" placeholder="如：日本-东京"></label>';
-        echo '<label>自定义地区（留空自动检测）<input type="text" name="region" value="' . e($edit['region'] ?? '') . '" placeholder="如：日本"></label></div>';
-        echo '<label>面板时区（小时，留空自动检测）<input type="text" name="tz_offset_h" value="' . e($edit ? setting('server_tz_h_' . (int)$edit['id']) : '') . '" placeholder="如 8 / 9 / -5 / 3.5"></label>';
-        echo '<div class="row2"><label>排序<input type="number" name="sort" value="' . (int)($edit['sort'] ?? 0) . '"></label>';
-        echo '<label class="row" style="margin-top:34px"><input type="checkbox" name="enabled" value="1" ' . (!isset($edit['enabled']) || (int)$edit['enabled'] ? 'checked' : '') . '> 上架销售</label></div>';
-        echo '<button class="btn">' . ($edit ? '保存修改' : '添加') . '</button></form></div>';
+        if (!$editSrv) server_edit_form(null);
     });
 }
 
